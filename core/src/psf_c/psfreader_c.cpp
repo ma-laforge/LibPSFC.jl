@@ -1,6 +1,7 @@
 /* C-interface to libpsf tool.
 
 Created to streamline Julia integration.
+This interface is not pretty.
 */
 #include <stdio.h>
 #include <cstring>
@@ -50,13 +51,29 @@ public:
 	size_t strvec_pos;
 	PSFVector *sigvec;
 
-	PSFDataSet_C(std::string filename): ds(filename), strvec_pos(0), sigvec(0) {};
+	//Not sure how to copy/release PSFScalar objects (as done with PSFVector).
+	//Could not find code on how to read PSFScalar.
+	//But get_signal_scalar() returns a const PSFScalar&
+	//Guess: release is not necessary, but lifetime might be limited to calling scope.
+	//Solution: Figure out type when read, and store here until user reads:
+	PSFElemType scalar_type;
+	PSFInt8 scalar_int8;
+	PSFInt32 scalar_int32;
+	PSFDouble scalar_double;
+	PSFComplexDouble scalar_cplxdouble;
+//	PSFString scalar_string;
+
+	PSFDataSet_C(std::string filename):
+		ds(filename), strvec_pos(0), sigvec(0), scalar_type(PSFELEM_UNKNOWN) {};
 	~PSFDataSet_C();
+
+	PSFElemType BufferValue(const PSFScalar &s);
 };
 
 PSFDataSet_C::~PSFDataSet_C() {
 	if(this->sigvec) delete this->sigvec;
 };
+
 
 //Helper functions
 //******************************************************************************
@@ -81,6 +98,24 @@ PSFResult PSFGetError(std::exception &e) {
 	return PSF_Unknown;
 }
 
+//Find element type of a PSFScalar:
+PSFElemType PSFGetScalarElemType(const PSFScalar &s) {
+	if (dynamic_cast<const PSFInt8Scalar*>(&s)) {
+		return PSFELEM_INT8;
+	} else if (dynamic_cast<const PSFInt32Scalar*>(&s)) {
+		return PSFELEM_INT32;
+	} else if (dynamic_cast<const PSFDoubleScalar*>(&s)) {
+		return PSFELEM_DOUBLE;
+	} else if (dynamic_cast<const PSFComplexDoubleScalar*>(&s)) {
+		return PSFELEM_COMPLEXDOUBLE;
+	} else if (dynamic_cast<const PSFStringScalar*>(&s)) {
+		return PSFELEM_STRING;
+	} else if (dynamic_cast<const StructScalar*>(&s)) {
+		return PSFELEM_STRUCT;
+	}
+	return PSFELEM_UNKNOWN;
+}
+
 //Find element type of a PSFVector:
 PSFElemType PSFGetVectorElemType(PSFVector &v) {
 	if (dynamic_cast<PSFInt8Vector*>(&v)) {
@@ -98,6 +133,29 @@ PSFElemType PSFGetVectorElemType(PSFVector &v) {
 	}
 	return PSFELEM_UNKNOWN;
 }
+
+template<class T>
+T PSFGetScalar(const PSFScalar &s) {
+	const PSFScalarT<T> *p;
+	p = dynamic_cast<const PSFScalarT<T>*>(&s);
+	if (p) return p->value;
+	return T(); //Generates 0-value if not of that type.
+}
+
+//Copy PSFScalar value to PSFDataSet_C registers:
+//TODO: Inefficient.  Find better way.
+PSFElemType PSFDataSet_C::BufferValue(const PSFScalar &s) {
+	PSFElemType result;
+	result = PSFGetScalarElemType(s);
+	this->scalar_int8 = PSFGetScalar<PSFInt8>(s);
+	this->scalar_int32 = PSFGetScalar<PSFInt32>(s);
+	this->scalar_double = PSFGetScalar<PSFDouble>(s);
+	this->scalar_cplxdouble = PSFGetScalar<PSFComplexDouble>(s);
+//	this->scalar_string = PSFGetScalar<PSFString>(s);
+	this->scalar_type = result;
+	return result;
+}
+
 
 //PropertyMap tools
 //******************************************************************************
@@ -123,6 +181,7 @@ int PSF_DeleteSigVec(PSFDataSet_C *dsc) {
 	dsc->sigvec = 0;
 	return PSF_Success;
 }
+
 
 //File properties
 //******************************************************************************
@@ -161,6 +220,49 @@ int PSF_GetSigNamesNext(PSFDataSet_C *dsc, char *namebuf, int nblen) {
 	if (dsc->strvec.size()<=dsc->strvec_pos) return PSF_PropertyNotFound;
 	strncpy(namebuf, dsc->strvec[dsc->strvec_pos].c_str(), nblen);
 	return PSF_Success;
+}
+
+
+//Scalars
+//******************************************************************************
+extern "C"
+int PSF_ReadScalar(PSFDataSet_C *dsc, char *signame) {
+	if (!dsc) return PSF_NotFound;
+	try {
+		const PSFScalar &s = dsc->ds.get_signal_scalar(signame);
+		dsc->BufferValue(s);
+	}
+	catch (std::exception &e) {return PSFGetError(e);}
+	catch (...) {return PSF_Unknown;}
+
+	return PSF_Success;
+}
+
+extern "C"
+int PSF_GetScalarType(PSFDataSet_C *dsc) {
+	if (!dsc) return PSFELEM_UNKNOWN;
+	return dsc->scalar_type;
+}
+
+extern "C"
+int8_t PSF_GetScalarInt8(PSFDataSet_C *dsc) {
+	if (!dsc) return 0;
+	return dsc->scalar_int8;
+}
+extern "C"
+int32_t PSF_GetScalarInt32(PSFDataSet_C *dsc) {
+	if (!dsc) return 0;
+	return dsc->scalar_int32;
+}
+extern "C"
+double PSF_GetScalarDouble(PSFDataSet_C *dsc) {
+	if (!dsc) return 0;
+	return dsc->scalar_double;
+}
+extern "C"
+std::complex<double> PSF_GetScalarCplxDouble(PSFDataSet_C *dsc) {
+	if (!dsc) return 0;
+	return dsc->scalar_cplxdouble;
 }
 
 
