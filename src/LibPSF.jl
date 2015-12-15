@@ -9,7 +9,7 @@ const objfile = joinpath(libroot, "libpsfreader_c.so")
 include("base.jl")
 #include("show.jl")
 
-export readsweep
+export readsweep, readscalar
 
 end #LibPSF
 #Last line

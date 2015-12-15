@@ -41,13 +41,13 @@ type DataReader
 	ds::PSFDataSetRef
 	filepath::ASCIIString
 	prop::PropDict
-	strbuf1::Vector{UInt8}
-	strbuf2::Vector{UInt8}
-	nsig::Int
-	npts::Int
+	nsig::Int #Not currently used
+	npts::Int #Not currently used
+	strbuf1::Vector{UInt8} #For reading
+	strbuf2::Vector{UInt8} #For reading
 end
 function DataReader(filepath::AbstractString)
-	result = DataReader(PSFDataSetRef(), ASCIIString(filepath), PropDict(), Array(UInt8, 1000), Array(UInt8, 1000), 0, 0)
+	result = DataReader(PSFDataSetRef(), ASCIIString(filepath), PropDict(), 0, 0, Array(UInt8, 1000), Array(UInt8, 1000))
 	result.strbuf1[1] = 0
 	result.strbuf2[1] = 0
 	return result
@@ -74,7 +74,7 @@ function raiseonerror(returnval::Cint)
 	elseif PSFResult.PropertyNotFound == returnval
 		error("Property not found")
 	else
-		error("Unknown error")
+		error("Unknown error: $returnval")
 	end
 end
 
@@ -85,8 +85,8 @@ function getpsfelemtype(elemtypeid::Cint)
 		return Int32;
 	elseif PSFElemType.E_DOUBLE == elemtypeid
 		return Cdouble;
-#	elseif PSFElemType.E_COMPLEXDOUBLE == elemtypeid
-#		return Complex{Cdouble}; #Will this work??
+	elseif PSFElemType.E_COMPLEXDOUBLE == elemtypeid
+		return Complex{Cdouble};
 #	elseif PSFElemType.E_STRING == elemtypeid
 #		return Cstring;
 #	elseif PSFElemType.E_STRUCT == elemtypeid
@@ -95,6 +95,17 @@ function getpsfelemtype(elemtypeid::Cint)
 		error("PSF element type not recognized: $elemtypeid.")
 	end
 end
+
+#readpsfscalar: Read in buffered scalar value.
+readpsfscalar{T}(reader::DataReader, ::Type{T}) = error("PSF element type not supported $T.")
+readpsfscalar(reader::DataReader, ::Type{Int8}) =
+	ccall((:PSF_GetScalarInt8, objfile), Int8, (Ptr{Void},), reader.ds.ref)
+readpsfscalar(reader::DataReader, ::Type{Int32}) =
+	ccall((:PSF_GetScalarInt32, objfile), Int32, (Ptr{Void},), reader.ds.ref)
+readpsfscalar(reader::DataReader, ::Type{Cdouble}) =
+	ccall((:PSF_GetScalarDouble, objfile), Cdouble, (Ptr{Void},), reader.ds.ref)
+readpsfscalar(reader::DataReader, ::Type{Complex{Cdouble}}) =
+	ccall((:PSF_GetScalarCplxDouble, objfile), Complex{Cdouble}, (Ptr{Void},), reader.ds.ref)
 
 #readpsfvec assuption: v is sized large enough to read in entire vector
 readpsfvec{T}(reader::DataReader, v::Vector{T}) = error("PSF element type not supported $T.")
@@ -106,6 +117,12 @@ readpsfvec(reader::DataReader, v::Vector{Int32}) =
 		reader.ds.ref, v))
 readpsfvec(reader::DataReader, v::Vector{Cdouble}) =
 	raiseonerror(ccall((:PSF_CopySigDouble, objfile), Cint, (Ptr{Void}, Ptr{Cdouble}),
+		reader.ds.ref, v))
+#==Question:
+Can we guarantee that all c++ implementations of std::complex<double> uses the same
+real/imag ordering as Julia's Complex{Cdouble}?==#
+readpsfvec(reader::DataReader, v::Vector{Complex{Cdouble}}) =
+	raiseonerror(ccall((:PSF_CopySigComplexDouble, objfile), Cint, (Ptr{Void}, Ptr{Complex{Cdouble}}),
 		reader.ds.ref, v))
 
 
@@ -181,7 +198,6 @@ function _readbufferedvec(reader::DataReader)
 	siglen = ccall((:PSF_GetSigLen, objfile), Cint, (Ptr{Void},),
 		reader.ds.ref
 	)
-	if siglen < 1; error("No data"); end
 	elemtypeid = ccall((:PSF_GetSigType, objfile), Cint, (Ptr{Void},),
 		reader.ds.ref
 	)
@@ -204,6 +220,17 @@ function Base.read(reader::DataReader, signame::ASCIIString)
 		reader.ds.ref, signame
 	))
 	return _readbufferedvec(reader)
+end
+
+#Read in a scalar value by name:
+function readscalar(reader::DataReader, signame::ASCIIString)
+	raiseonerror(ccall((:PSF_ReadScalar, objfile), Cint, (Ptr{Void}, Cstring),
+		reader.ds.ref, signame
+	))
+	elemtypeid = ccall((:PSF_GetScalarType, objfile), Cint, (Ptr{Void},),
+		reader.ds.ref
+	)
+	return readpsfscalar(reader, getpsfelemtype(elemtypeid))
 end
 
 #Last line
