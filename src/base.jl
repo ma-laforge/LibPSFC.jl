@@ -40,7 +40,7 @@ PSFDataSetRef() = PSFDataSetRef(0)
 type DataReader
 	ds::PSFDataSetRef
 	filepath::ASCIIString
-	prop::PropDict
+	properties::PropDict
 	nsig::Int #Not currently used
 	npts::Int #Not currently used
 	strbuf1::Vector{UInt8} #For reading
@@ -179,7 +179,7 @@ end
 function Base.open(::Type{DataReader}, filepath::AbstractString)
 	result = DataReader(filepath)
 	result.ds = open(PSFDataSetRef, result.filepath)
-	result.prop = readproperties(result)
+	result.properties = readproperties(result)
 	return result
 end
 _open(filepath::AbstractString) = open(DataReader, filepath)

@@ -9,7 +9,7 @@ function testfileaccess(path::AbstractString)
 	println("\n\nfile: $path")
 	println("------------------")
 	reader = LibPSF._open(path)
-	display(reader.prop)
+	display(reader.properties)
 	@show names(reader)
 	close(reader)
 end
