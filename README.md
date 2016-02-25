@@ -45,6 +45,13 @@ The relevant portions of the libpsf library are provided in the [core subdirecto
 
 ## Known Limitations
 
+### Missing Features
+
+LibPSF.jl does not currently support all the functionnality of the original libpsf library.  A few features known to be missing are listed below:
+
+ - Does not support reading "structures" (ex: DC operating point results).
+ - Does not support `StructVector`, nor `VectorStruct` (`m_invertstruct`).
+
 ### Compatibility
 
 Extensive compatibility testing of LibPSF.jl has not been performed.  The module has been tested using the following environment(s):
