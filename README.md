@@ -1,5 +1,7 @@
 # LibPSF.jl
 
+**DEPRECATED:**  Use <https://github.com/ma-laforge/LibPSF2.jl>.
+
 ## Description
 
 The LibPSF.jl module provides a Julia interface for Henrik Johansson's .psf reader.
