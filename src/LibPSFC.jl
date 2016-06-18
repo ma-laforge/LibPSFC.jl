@@ -1,6 +1,6 @@
-#LibPSF: A Julia wrapper for libpsf tools
+#LibPSFC: A Julia wrapper for libpsf tools
 #-------------------------------------------------------------------------------
-module LibPSF
+module LibPSFC
 
 const rootpath = realpath(joinpath(dirname(realpath(@__FILE__)),"../."))
 const libroot = joinpath(rootpath, "core/lib")
@@ -11,5 +11,5 @@ include("base.jl")
 
 export readsweep, readscalar
 
-end #LibPSF
+end #LibPSFC
 #Last line

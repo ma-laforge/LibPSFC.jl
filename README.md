@@ -1,19 +1,19 @@
-# LibPSF.jl
+# LibPSFC.jl
 
 **DEPRECATED:**  Use <https://github.com/ma-laforge/LibPSF2.jl>.
 
 ## Description
 
-The LibPSF.jl module provides a Julia interface for Henrik Johansson's .psf reader.
+The LibPSFC.jl module provides a Julia interface for Henrik Johansson's .psf reader.
 
 ## Sample Usage
 
-Examples on how to use the LibPSF.jl capabilities can be found under the [test directory](test/).
+Examples on how to use the LibPSFC.jl capabilities can be found under the [test directory](test/).
 
 <a name="Installation"></a>
 ## Installation
 
-		julia> Pkg.clone("https://github.com/ma-laforge/LibPSF.jl.git")
+		julia> Pkg.clone("https://github.com/ma-laforge/LibPSFC.jl.git")
 
 ### Compiling C/C++ Core (Ubuntu Systems)
 
@@ -23,7 +23,7 @@ The core C++ library (libpsf) requires the "boost" library.  Boost is installed 
 
 The libpsf + C-wrapper code is then compiled as follows:
 
-		$ cd [JULIA_LIB_PATH]/LibPSF/core
+		$ cd [JULIA_LIB_PATH]/LibPSFC/core
 		$ make all
 
 NOTE:
@@ -39,7 +39,7 @@ Unclear at the moment.
 
 ### libpsf
 
-The core of LibPSF.jl makes use of Henrik Johansson's libpsf library:
+The core of LibPSFC.jl makes use of Henrik Johansson's libpsf library:
 
  - **libpsf** (LGPL v3): <https://github.com/henjo/libpsf>.
 
@@ -49,14 +49,14 @@ The relevant portions of the libpsf library are provided in the [core subdirecto
 
 ### Missing Features
 
-LibPSF.jl does not currently support all the functionnality of the original libpsf library.  A few features known to be missing are listed below:
+LibPSFC.jl does not currently support all the functionnality of the original libpsf library.  A few features known to be missing are listed below:
 
  - Does not support reading "structures" (ex: DC operating point results).
  - Does not support `StructVector`, nor `VectorStruct` (`m_invertstruct`).
 
 ### Compatibility
 
-Extensive compatibility testing of LibPSF.jl has not been performed.  The module has been tested using the following environment(s):
+Extensive compatibility testing of LibPSFC.jl has not been performed.  The module has been tested using the following environment(s):
 
  - Linux / Julia-0.4.0 (64-bit) / Ubuntu
 
