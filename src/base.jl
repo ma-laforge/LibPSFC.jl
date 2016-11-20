@@ -30,7 +30,7 @@ end #module PSFElemType
 
 #==Main types
 ===============================================================================#
-typealias PropDict Dict{ASCIIString, Any}
+typealias PropDict Dict{String, Any}
 
 type PSFDataSetRef
 	ref::Ptr{Void}
@@ -39,15 +39,15 @@ PSFDataSetRef() = PSFDataSetRef(0)
 
 type DataReader
 	ds::PSFDataSetRef
-	filepath::ASCIIString
+	filepath::String
 	properties::PropDict
 	nsig::Int #Not currently used
 	npts::Int #Not currently used
 	strbuf1::Vector{UInt8} #For reading
 	strbuf2::Vector{UInt8} #For reading
 end
-function DataReader(filepath::AbstractString)
-	result = DataReader(PSFDataSetRef(), ASCIIString(filepath), PropDict(), 0, 0, Array(UInt8, 1000), Array(UInt8, 1000))
+function DataReader(filepath::String)
+	result = DataReader(PSFDataSetRef(), filepath, PropDict(), 0, 0, Array(UInt8, 1000), Array(UInt8, 1000))
 	result.strbuf1[1] = 0
 	result.strbuf2[1] = 0
 	return result
@@ -136,30 +136,30 @@ function readproperties(reader::DataReader)
 		(Ptr{Void}, Ptr{UInt8}, Cint, Ptr{UInt8}, Cint),
 		reader.ds.ref, reader.strbuf1, length(reader.strbuf1), reader.strbuf2, length(reader.strbuf2)
 	) != PSFResult.Success; return result; end
-	push!(result, bytestring(pointer(reader.strbuf1)) => bytestring(pointer(reader.strbuf2)))
+	push!(result, unsafe_string(pointer(reader.strbuf1)) => unsafe_string(pointer(reader.strbuf2)))
 
 	while PSFResult.Success == ccall((:PSFHeader_GetPropNext, objfile), Cint,
 		(Ptr{Void}, Ptr{UInt8}, Cint, Ptr{UInt8}, Cint),
 		reader.ds.ref, reader.strbuf1, length(reader.strbuf1), reader.strbuf2, length(reader.strbuf2))
 
-		push!(result, bytestring(pointer(reader.strbuf1)) => bytestring(pointer(reader.strbuf2)))
+		push!(result, unsafe_string(pointer(reader.strbuf1)) => unsafe_string(pointer(reader.strbuf2)))
 	end
 
 	return result
 end
 
 function Base.names(reader::DataReader)
-	result = ASCIIString[]
+	result = String[]
 
 	if ccall((:PSF_GetSigNamesFirst, objfile), Cint, (Ptr{Void}, Ptr{UInt8}, Cint),
 		reader.ds.ref, reader.strbuf1, length(reader.strbuf1)
 	) != PSFResult.Success; return result; end
-	push!(result, bytestring(pointer(reader.strbuf1)))
+	push!(result, unsafe_string(pointer(reader.strbuf1)))
 
 	while PSFResult.Success == ccall((:PSF_GetSigNamesNext, objfile), Cint,
 		(Ptr{Void}, Ptr{UInt8}, Cint), reader.ds.ref, reader.strbuf1, length(reader.strbuf1))
 
-		push!(result, bytestring(pointer(reader.strbuf1)))
+		push!(result, unsafe_string(pointer(reader.strbuf1)))
 	end
 
 	return result
@@ -168,7 +168,7 @@ end
 
 #==Open/close/read functions
 ===============================================================================#
-function Base.open(::Type{PSFDataSetRef}, filepath::ASCIIString)
+function Base.open(::Type{PSFDataSetRef}, filepath::String)
 	result = PSFDataSetRef()
 	raiseonerror(ccall((:PSFDataSet_Open, objfile), Cint, (Cstring, Ptr{PSFDataSetRef}),
 		filepath, pointer_from_objref(result)
@@ -176,13 +176,13 @@ function Base.open(::Type{PSFDataSetRef}, filepath::ASCIIString)
 	finalizer(result, close)
 	return result
 end
-function Base.open(::Type{DataReader}, filepath::AbstractString)
+function Base.open(::Type{DataReader}, filepath::String)
 	result = DataReader(filepath)
 	result.ds = open(PSFDataSetRef, result.filepath)
 	result.properties = readproperties(result)
 	return result
 end
-_open(filepath::AbstractString) = open(DataReader, filepath)
+_open(filepath::String) = open(DataReader, filepath)
 
 function Base.close(ds::PSFDataSetRef)
 	raiseonerror(ccall((:PSFDataSet_Close, objfile), Cint, (Ptr{Void},),
@@ -215,7 +215,7 @@ function readsweep(reader::DataReader)
 end
 
 #Read in a signal by name:
-function Base.read(reader::DataReader, signame::ASCIIString)
+function Base.read(reader::DataReader, signame::String)
 	raiseonerror(ccall((:PSF_ReadSig, objfile), Cint, (Ptr{Void}, Cstring),
 		reader.ds.ref, signame
 	))
@@ -223,7 +223,7 @@ function Base.read(reader::DataReader, signame::ASCIIString)
 end
 
 #Read in a scalar value by name:
-function readscalar(reader::DataReader, signame::ASCIIString)
+function readscalar(reader::DataReader, signame::String)
 	raiseonerror(ccall((:PSF_ReadScalar, objfile), Cint, (Ptr{Void}, Cstring),
 		reader.ds.ref, signame
 	))

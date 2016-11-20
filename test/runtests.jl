@@ -5,7 +5,7 @@ using LibPSFC
 
 #No real test code yet... just demonstrate use:
 
-function testfileaccess(path::AbstractString)
+function testfileaccess(path::String)
 	println("\n\nfile: $path")
 	println("------------------")
 	reader = LibPSFC._open(path)
@@ -14,7 +14,7 @@ function testfileaccess(path::AbstractString)
 	close(reader)
 end
 
-sampledata(filename::AbstractString) = joinpath(LibPSFC.rootpath, "core/data", filename)
+sampledata(filename::String) = joinpath(LibPSFC.rootpath, "core/data", filename)
 
 testfileaccess(sampledata("opBegin"))
 testfileaccess(sampledata("pss0.fd.pss"))
