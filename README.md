@@ -1,6 +1,6 @@
 # LibPSFC.jl
 
-**DEPRECATED:**  Use <https://github.com/ma-laforge/LibPSF2.jl>.
+**DEPRECATED:**  Use <https://github.com/ma-laforge/LibPSF.jl>.
 
 ## Description
 
