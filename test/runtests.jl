@@ -30,6 +30,6 @@ y = read(reader, signame)
 close(reader)
 
 @show t[1], t[end]
-flush(STDOUT)
+flush(stdout)
 
 :Test_Complete

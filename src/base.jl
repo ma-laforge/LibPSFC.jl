@@ -30,14 +30,14 @@ end #module PSFElemType
 
 #==Main types
 ===============================================================================#
-typealias PropDict Dict{String, Any}
+const PropDict = Dict{String, Any}
 
-type PSFDataSetRef
-	ref::Ptr{Void}
+mutable struct PSFDataSetRef
+	ref::Ptr{Nothing}
 end
 PSFDataSetRef() = PSFDataSetRef(0)
 
-type DataReader
+mutable struct DataReader
 	ds::PSFDataSetRef
 	filepath::String
 	properties::PropDict
@@ -47,7 +47,7 @@ type DataReader
 	strbuf2::Vector{UInt8} #For reading
 end
 function DataReader(filepath::String)
-	result = DataReader(PSFDataSetRef(), filepath, PropDict(), 0, 0, Array(UInt8, 1000), Array(UInt8, 1000))
+	result = DataReader(PSFDataSetRef(), filepath, PropDict(), 0, 0, Array{UInt8}(undef, 1000), Array{UInt8}(undef, 1000))
 	result.strbuf1[1] = 0
 	result.strbuf2[1] = 0
 	return result
@@ -97,32 +97,32 @@ function getpsfelemtype(elemtypeid::Cint)
 end
 
 #readpsfscalar: Read in buffered scalar value.
-readpsfscalar{T}(reader::DataReader, ::Type{T}) = error("PSF element type not supported $T.")
+readpsfscalar(reader::DataReader, ::Type{T}) where T = error("PSF element type not supported $T.")
 readpsfscalar(reader::DataReader, ::Type{Int8}) =
-	ccall((:PSF_GetScalarInt8, objfile), Int8, (Ptr{Void},), reader.ds.ref)
+	ccall((:PSF_GetScalarInt8, objfile), Int8, (Ptr{Nothing},), reader.ds.ref)
 readpsfscalar(reader::DataReader, ::Type{Int32}) =
-	ccall((:PSF_GetScalarInt32, objfile), Int32, (Ptr{Void},), reader.ds.ref)
+	ccall((:PSF_GetScalarInt32, objfile), Int32, (Ptr{Nothing},), reader.ds.ref)
 readpsfscalar(reader::DataReader, ::Type{Cdouble}) =
-	ccall((:PSF_GetScalarDouble, objfile), Cdouble, (Ptr{Void},), reader.ds.ref)
+	ccall((:PSF_GetScalarDouble, objfile), Cdouble, (Ptr{Nothing},), reader.ds.ref)
 readpsfscalar(reader::DataReader, ::Type{Complex{Cdouble}}) =
-	ccall((:PSF_GetScalarCplxDouble, objfile), Complex{Cdouble}, (Ptr{Void},), reader.ds.ref)
+	ccall((:PSF_GetScalarCplxDouble, objfile), Complex{Cdouble}, (Ptr{Nothing},), reader.ds.ref)
 
 #readpsfvec assuption: v is sized large enough to read in entire vector
-readpsfvec{T}(reader::DataReader, v::Vector{T}) = error("PSF element type not supported $T.")
+readpsfvec(reader::DataReader, v::Vector{T}) where T = error("PSF element type not supported $T.")
 readpsfvec(reader::DataReader, v::Vector{Int8}) =
-	raiseonerror(ccall((:PSF_CopySigInt8, objfile), Cint, (Ptr{Void}, Ptr{Int8}),
+	raiseonerror(ccall((:PSF_CopySigInt8, objfile), Cint, (Ptr{Nothing}, Ptr{Int8}),
 		reader.ds.ref, v))
 readpsfvec(reader::DataReader, v::Vector{Int32}) =
-	raiseonerror(ccall((:PSF_CopySigInt32, objfile), Cint, (Ptr{Void}, Ptr{Int32}),
+	raiseonerror(ccall((:PSF_CopySigInt32, objfile), Cint, (Ptr{Nothing}, Ptr{Int32}),
 		reader.ds.ref, v))
 readpsfvec(reader::DataReader, v::Vector{Cdouble}) =
-	raiseonerror(ccall((:PSF_CopySigDouble, objfile), Cint, (Ptr{Void}, Ptr{Cdouble}),
+	raiseonerror(ccall((:PSF_CopySigDouble, objfile), Cint, (Ptr{Nothing}, Ptr{Cdouble}),
 		reader.ds.ref, v))
 #==Question:
 Can we guarantee that all c++ implementations of std::complex<double> uses the same
 real/imag ordering as Julia's Complex{Cdouble}?==#
 readpsfvec(reader::DataReader, v::Vector{Complex{Cdouble}}) =
-	raiseonerror(ccall((:PSF_CopySigComplexDouble, objfile), Cint, (Ptr{Void}, Ptr{Complex{Cdouble}}),
+	raiseonerror(ccall((:PSF_CopySigComplexDouble, objfile), Cint, (Ptr{Nothing}, Ptr{Complex{Cdouble}}),
 		reader.ds.ref, v))
 
 
@@ -133,13 +133,13 @@ function readproperties(reader::DataReader)
 	result = PropDict()
 
 	if ccall((:PSFHeader_GetPropFirst, objfile), Cint,
-		(Ptr{Void}, Ptr{UInt8}, Cint, Ptr{UInt8}, Cint),
+		(Ptr{Nothing}, Ptr{UInt8}, Cint, Ptr{UInt8}, Cint),
 		reader.ds.ref, reader.strbuf1, length(reader.strbuf1), reader.strbuf2, length(reader.strbuf2)
 	) != PSFResult.Success; return result; end
 	push!(result, unsafe_string(pointer(reader.strbuf1)) => unsafe_string(pointer(reader.strbuf2)))
 
 	while PSFResult.Success == ccall((:PSFHeader_GetPropNext, objfile), Cint,
-		(Ptr{Void}, Ptr{UInt8}, Cint, Ptr{UInt8}, Cint),
+		(Ptr{Nothing}, Ptr{UInt8}, Cint, Ptr{UInt8}, Cint),
 		reader.ds.ref, reader.strbuf1, length(reader.strbuf1), reader.strbuf2, length(reader.strbuf2))
 
 		push!(result, unsafe_string(pointer(reader.strbuf1)) => unsafe_string(pointer(reader.strbuf2)))
@@ -151,13 +151,13 @@ end
 function Base.names(reader::DataReader)
 	result = String[]
 
-	if ccall((:PSF_GetSigNamesFirst, objfile), Cint, (Ptr{Void}, Ptr{UInt8}, Cint),
+	if ccall((:PSF_GetSigNamesFirst, objfile), Cint, (Ptr{Nothing}, Ptr{UInt8}, Cint),
 		reader.ds.ref, reader.strbuf1, length(reader.strbuf1)
 	) != PSFResult.Success; return result; end
 	push!(result, unsafe_string(pointer(reader.strbuf1)))
 
 	while PSFResult.Success == ccall((:PSF_GetSigNamesNext, objfile), Cint,
-		(Ptr{Void}, Ptr{UInt8}, Cint), reader.ds.ref, reader.strbuf1, length(reader.strbuf1))
+		(Ptr{Nothing}, Ptr{UInt8}, Cint), reader.ds.ref, reader.strbuf1, length(reader.strbuf1))
 
 		push!(result, unsafe_string(pointer(reader.strbuf1)))
 	end
@@ -173,7 +173,7 @@ function Base.open(::Type{PSFDataSetRef}, filepath::String)
 	raiseonerror(ccall((:PSFDataSet_Open, objfile), Cint, (Cstring, Ptr{PSFDataSetRef}),
 		filepath, pointer_from_objref(result)
 	))
-	finalizer(result, close)
+	finalizer(close, result)
 	return result
 end
 function Base.open(::Type{DataReader}, filepath::String)
@@ -185,7 +185,7 @@ end
 _open(filepath::String) = open(DataReader, filepath)
 
 function Base.close(ds::PSFDataSetRef)
-	raiseonerror(ccall((:PSFDataSet_Close, objfile), Cint, (Ptr{Void},),
+	raiseonerror(ccall((:PSFDataSet_Close, objfile), Cint, (Ptr{Nothing},),
 		ds.ref
 	))
 	ds.ref = 0
@@ -195,20 +195,20 @@ Base.close(reader::DataReader) = close(reader.ds)
 
 #Read in vector buffered by C++ reader:
 function _readbufferedvec(reader::DataReader)
-	siglen = ccall((:PSF_GetSigLen, objfile), Cint, (Ptr{Void},),
+	siglen = ccall((:PSF_GetSigLen, objfile), Cint, (Ptr{Nothing},),
 		reader.ds.ref
 	)
-	elemtypeid = ccall((:PSF_GetSigType, objfile), Cint, (Ptr{Void},),
+	elemtypeid = ccall((:PSF_GetSigType, objfile), Cint, (Ptr{Nothing},),
 		reader.ds.ref
 	)
-	v = Array(getpsfelemtype(elemtypeid), siglen)
+	v = Array{getpsfelemtype(elemtypeid)}(undef, siglen)
 	readpsfvec(reader, v)
 	return v
 end
 
 #Read in sweep vector:
 function readsweep(reader::DataReader)
-	raiseonerror(ccall((:PSF_ReadSigSweep, objfile), Cint, (Ptr{Void},),
+	raiseonerror(ccall((:PSF_ReadSigSweep, objfile), Cint, (Ptr{Nothing},),
 		reader.ds.ref
 	))
 	return _readbufferedvec(reader)
@@ -216,7 +216,7 @@ end
 
 #Read in a signal by name:
 function Base.read(reader::DataReader, signame::String)
-	raiseonerror(ccall((:PSF_ReadSig, objfile), Cint, (Ptr{Void}, Cstring),
+	raiseonerror(ccall((:PSF_ReadSig, objfile), Cint, (Ptr{Nothing}, Cstring),
 		reader.ds.ref, signame
 	))
 	return _readbufferedvec(reader)
@@ -224,10 +224,10 @@ end
 
 #Read in a scalar value by name:
 function readscalar(reader::DataReader, signame::String)
-	raiseonerror(ccall((:PSF_ReadScalar, objfile), Cint, (Ptr{Void}, Cstring),
+	raiseonerror(ccall((:PSF_ReadScalar, objfile), Cint, (Ptr{Nothing}, Cstring),
 		reader.ds.ref, signame
 	))
-	elemtypeid = ccall((:PSF_GetScalarType, objfile), Cint, (Ptr{Void},),
+	elemtypeid = ccall((:PSF_GetScalarType, objfile), Cint, (Ptr{Nothing},),
 		reader.ds.ref
 	)
 	return readpsfscalar(reader, getpsfelemtype(elemtypeid))
