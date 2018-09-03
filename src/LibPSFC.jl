@@ -1,5 +1,7 @@
 #LibPSFC: A Julia wrapper for libpsf tools
 #-------------------------------------------------------------------------------
+__precompile__(true)
+
 module LibPSFC
 
 const rootpath = realpath(joinpath(dirname(realpath(@__FILE__)),"../."))
