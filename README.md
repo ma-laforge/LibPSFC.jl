@@ -58,7 +58,7 @@ LibPSFC.jl does not currently support all the functionnality of the original lib
 
 Extensive compatibility testing of LibPSFC.jl has not been performed.  The module has been tested using the following environment(s):
 
- - Linux / Julia-0.7.0 (64-bit) / Ubuntu
+ - Linux / Julia-1.1.1 (64-bit) / Ubuntu
 
 #### Repository versions:
 
